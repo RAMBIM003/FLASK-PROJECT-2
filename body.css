@@ -115,10 +115,15 @@ section a {
     transform: scale(1.05, 1);
 }
 
+#submit {
+    color: white; /* Change text color to white */
+}
+
 .sign-up-link {
     text-align: center;
     font-size: 15px;
     margin-top: 20px;
+    ;
 }
 
 .sign-up-link a {
