@@ -2,6 +2,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
 import os
 
 # Initialize Flask App
@@ -17,6 +19,19 @@ users_collection = db["users"]
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "signin"
+
+# Flask-Mail Configuration
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'your-email@gmail.com'
+app.config['MAIL_PASSWORD'] = 'your-email-password'
+app.config['MAIL_DEFAULT_SENDER'] = 'your-email@gmail.com'
+
+mail = Mail(app)
+
+# Token Serializer
+serializer = URLSafeTimedSerializer(app.config["SECRET_KEY"])
 
 # User Model for Flask-Login
 class User(UserMixin):
@@ -88,13 +103,54 @@ def signin():
 def dashboard():
     return f"Welcome, {current_user.email}! <a href='/logout'>Logout</a>"
 
-# 📝 Route: Logout
+# Logout
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
     flash("You have been logged out!", "info")
     return redirect(url_for("signin"))
+
+# Forgot Password
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email")
+        user = users_collection.find_one({"_id": email})
+        
+        if user:
+            token = serializer.dumps(email, salt='password-reset-salt')
+            reset_url = url_for('reset_password', token=token, _external=True)
+            
+            msg = Message("Password Reset Request", recipients=[email])
+            msg.body = f"Click the link to reset your password: {reset_url}"
+            mail.send(msg)
+            
+            flash("A password reset link has been sent to your email.", "info")
+            return redirect(url_for("signin"))
+        
+        flash("Email not found.", "danger")
+    
+    return render_template("forgot_password.html")
+
+# Reset Password
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    try:
+        email = serializer.loads(token, salt='password-reset-salt', max_age=3600)
+    except:
+        flash("The reset link is invalid or has expired.", "danger")
+        return redirect(url_for("forgot_password"))
+    
+    if request.method == "POST":
+        new_password = request.form.get("password")
+        hashed_password = generate_password_hash(new_password)
+        users_collection.update_one({"_id": email}, {"$set": {"password": hashed_password}})
+        
+        flash("Your password has been updated!", "success")
+        return redirect(url_for("signin"))
+    
+    return render_template("reset_password.html")
 
 # Run Flask App
 if __name__ == "__main__":
