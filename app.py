@@ -31,12 +31,12 @@ def load_user(user_id):
         return User(user_data["_id"], user_data["email"])
     return None
 
-# 📝 Route: Home Page
+# Home Page
 @app.route("/")
 def home():
     return render_template("index.html")
 
-# 📝 Route: Registration
+# Registration
 @app.route("/register", methods=["POST"])
 def register():
     name = request.form.get("name")
@@ -64,7 +64,7 @@ def register():
     flash("Registration successful! Please log in.", "success")
     return redirect(url_for("signin"))
 
-# 📝 Route: Login
+# Login
 @app.route("/signin", methods=["GET", "POST"])
 def signin():
     if request.method == "POST":
@@ -82,7 +82,7 @@ def signin():
 
     return render_template("signin.html")
 
-# 📝 Route: Dashboard (Protected)
+# Dashboard
 @app.route("/dashboard")
 @login_required
 def dashboard():
