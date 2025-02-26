@@ -115,8 +115,10 @@ section a {
     transform: scale(1.05, 1);
 }
 
-#submit {
-    color:#fff; 
+button>p{
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
 }
 
 .sign-up-link {
